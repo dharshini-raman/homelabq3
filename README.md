@@ -33,14 +33,14 @@ This repo documents the full build-out of the Q3 KSO homelab, including Prisma A
 | Service Connection | `raman-lab` (US Southeast) |
 | Prisma Access Peer IP | `34.99.113.219` |
 | XDR Console | `globalseacademy.xdr.us.paloaltonetworks.com` |
-| Test Endpoint | Windows 11 x64 — `MisterChief` |
+| Test Endpoint | Windows 11 x64 — `mini` |
 | Attack Machine | Kali Linux 2026.1 — `192.168.1.230` |
 | IKE Crypto | AES-256-CBC / SHA-256 / DH Group 20 / 8hr |
 
 **VMware Workstation VMs:**
 - `fw` — PA-VM firewall
 - `pano` — Panorama (optional)
-- `Windows 11 x64` — Target endpoint with XDR agent (`MisterChief`)
+- `Windows 11 x64` — Target endpoint with XDR agent (`mini`)
 - `Ubuntu 64-bit v2` — Linux test node
 - `kali-linux-2026.1` — Attack machine
 
@@ -206,7 +206,7 @@ Deploy the Cortex XDR endpoint agent on the Windows test machine.
 
 4. Click **Create**.
 5. Right-click the installation → **Agent Installation > 64-bit installer** → save the `.msi`.
-6. Deploy the `.msi` on the **Windows 11 x64 machine (MisterChief)**.
+6. Deploy the `.msi` on the **Windows 11 x64 machine (mini)**.
 7. On the endpoint, open the XDR console and click **Check In Now**.
 8. Wait ~5 minutes — the endpoint should appear as enabled. ✅
 
@@ -238,7 +238,7 @@ Enable Host Insights on the XDR endpoint.
    | Platform | Windows |
    | Agent Settings | Dee Agent Settings |
 
-5. **Next** → Select Endpoint: `MisterChief` → **Next** → **Done** ✅
+5. **Next** → Select Endpoint: `mini` → **Next** → **Done** ✅
 
 ---
 
@@ -264,7 +264,7 @@ Enable Host Insights on the XDR endpoint.
    | Platform | Windows |
    | Agent Settings | Dee Block Floppy |
 
-5. **Next** → Endpoint: `MisterChief` → **Next** → **Done** ✅
+5. **Next** → Endpoint: `mini` → **Next** → **Done** ✅
 
 ---
 
@@ -464,7 +464,7 @@ Configure a site-to-site IPsec service connection between the PA-VM and Prisma A
 16. From a **GlobalProtect-connected device**, ping the Windows VM on the branch LAN:
 
    ```
-   Target: 10.3.2.20 (Windows 11 x64 — MisterChief)
+   Target: 10.3.2.20 (Windows 11 x64 — mini)
    ```
 
    Expected:
@@ -525,7 +525,7 @@ msfconsole -q -x "use exploit/multi/handler; \
 
 ### 3. Download the Payload on the Windows Endpoint
 
-On **MisterChief (Windows 11 x64)**, open a browser and go to:
+On **mini (Windows 11 x64)**, open a browser and go to:
 
 ```
 http://192.168.1.230/malware.exe
@@ -566,7 +566,7 @@ In the XDR console, navigate to **Incidents** or **Alerts** to confirm:
 | Field | Value |
 |---|---|
 | Alert Type | Malware / Suspicious Executable |
-| Endpoint | MisterChief |
+| Endpoint | mini |
 | File | `malware.exe` |
 | Action | **Prevented** ✅ |
 
@@ -579,7 +579,7 @@ In the XDR console, navigate to **Incidents** or **Alerts** to confirm:
 | Prisma Access License Requested | ✅ |
 | GlobalProtect Mobile Users Deployed | ✅ |
 | ADEM Configured | ✅ |
-| Cortex XDR Agent Deployed on MisterChief | ✅ |
+| Cortex XDR Agent Deployed on mini | ✅ |
 | Host Insights Enabled | ✅ |
 | Device Control — Block Floppy | ✅ |
 | BIOC Rule — PowerShell `-enc` Detection | ✅ |
