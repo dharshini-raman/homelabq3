@@ -30,7 +30,7 @@
 | Service Connection | raman-lab (US Southeast) |
 | Prisma Access Peer IP | 34.99.113.219 |
 | XDR Console | https://globalseacademy.xdr.us.paloaltonetworks.com |
-| Test Endpoint | Windows 11 x64 ("MisterChief") |
+| Test Endpoint | Windows 11 x64 ("mini") |
 | Attack Machine | Kali Linux 2026.1 — 192.168.1.230 (or 192.168.103.130) |
 | IKE Crypto | AES-256-CBC / SHA-256 / DH Group 20 / 8hr lifetime |
 
